@@ -102,5 +102,7 @@ docker和vm的架构图
 对比
 ![img.png](img.png)
 
+### 四、思考：容器如何实现高可用（optional）
+docker swarm 多服务器部署多容器，实现高可用
 
     
