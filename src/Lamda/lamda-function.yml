@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  YanyanLamdaFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: YanyanLamdaFunctionRoleName
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowLambdaToAssumeRole
+            Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - 'lambda.amazonaws.com'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  YanyanLamdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: YanyanLamdaFunction
+      Role: !GetAtt YanyanLamdaFunctionRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: !Sub |
+          var response = require('cfn-response');
+          exports.handler = function(event, context) {
+             var responseData = {Value: event.ResourceProperties.List};
+             responseData.Value.push(event.ResourceProperties.AppendedItem);
+             response.send(event, context, response.SUCCESS, responseData);
+          };

@@ -34,7 +34,7 @@ kubectl get ingress -o wide
 
 kubectl describe pod node-express
 kubectl describe deploy node-express-deployment
-kubectl describe svc nginx-service
+kubectl describe svc node-express-service
 kubectl describe ingress node-express-ingress
 
 ## 5.使用 kubectl logs 查看正在运行的pod的日志
@@ -58,12 +58,21 @@ Advanced
 
 ## 2.简单描述 Pod, Node, Deployment, Service, Ingress, ReplicaSet, Namespace 概念
 pod: k8s中可被调度的最小单位，k8s在进行workload调度的最小单元。 pod中只run一个或多个容器
+Node：Kubernetes 集群中其中一台工作机器，是集群的一部分。
 deployment: 控制pod以怎样的形式被创建或者更新，不是直接管理Pod，是通过一层replicaset。
 service: 控制服务之间通信，干一件事件的一堆pod。
 ingress: 控制service之间和service与外部的通信。
+ReplicaSet： RepicaSet 是通过一组字段来定义的，包括一个用来识别可获得的 Pod 的集合的选择算符、
+一个用来标明应该维护的副本个数的数值、
+一个用来指定应该创建新 Pod 以满足副本个数条件时要使用的 Pod 模板等等。 
+每个 ReplicaSet 都通过根据需要创建和 删除 Pod 以使得副本个数达到期望值， 进而实现其存在价值。
 namespace: 用来做k8s资源的逻辑隔离， 怎么划分namespace？一般根据业务场景。
 
 ## 3.创建一个kubernetes cronjob（扩展 Node.js 应用或使用其他工程）
-
+命令
+kubectl apply -f cronjob.yaml
+kubectl get cronjob hello
+kubectl get jobs --watch
+kubectl delete cronjob hell
   
 

@@ -25,5 +25,16 @@ minikube delete 命令可用于删除集群。
 6.现在可以使用您可以使用 kubectl 与集群进行交互
 7. Pod 运行异常的排错方法
 https://feisky.gitbooks.io/kubernetes/content/troubleshooting/pod.html
-8.   
+8. 进入pod
+kubectl exec <POD-NAME> -c <CONTAINER-NAME> -- <COMMAND>
+比如：kubectl exec -ti <your-pod-name>  -n <your-namespace>  -- /bin/sh
+kubectl exec -ti pod/node-express  -n <your-namespace>  -- /bin/sh   
+9. Ingress 控制器
+为了让 Ingress 资源工作，集群必须有一个正在运行的 Ingress 控制器。
+Ingress 控制器不是随集群自动启动的。  
+10.为了使Ingress 资源工作，必须在Minikube 环境中使用 NGINX Ingress 控制器配置 Ingress
+Ingress是一种 API 对象，其中定义了一些规则使得集群中的 服务可以从集群外访问。 
+*Ingress 控制器 负责满足 Ingress 中所设置的规则*。   
+   
+   
 
