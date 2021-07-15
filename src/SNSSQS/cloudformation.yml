@@ -5,17 +5,6 @@ Resources:
     Properties:
       QueueName: "yanyan-queue"
       
-  YanyanSNSTopic:
-    Type: 'AWS::SNS::Topic'
-    DeletionPolicy: Delete
-    Properties:
-      TopicName: 'yanyan-sns-topic'
-      Subscription:
-        - Endpoint: "yyhuang@thoughtworks.com"
-          Protocol: email
-        - Endpoint: !GetAtt YanyanQueue.Arn
-          Protocol: sqs
-           
   YanyanLamdaFunctionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -32,41 +21,69 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
         - arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole
-      Policies:
-        - PolicyName: AllowPublishToPartnerPlatformDomainEventTopic
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - sns:Publish
-                Resource: !Ref YanyanSNSTopic      
+#      Policies:
+#        - PolicyName: AllowPublishToPartnerPlatformDomainEventTopic
+#          PolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#              - Effect: Allow
+#                Action:
+#                  - sns:Publish
+#                Resource: !Ref PartnerPlatformNotificationTopicArn
+
+  YanyanLamdaFunctionForSnsInvokePermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref YanyanLamdaFunctionForSns
+      Principal: sns.amazonaws.com
       
-  YanyanLamdaFunction:
+  YanyanLamdaFunctionForSQS:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: YanyanLamdaFunction
+      FunctionName: YanyanLamdaFunctionForSQS
       Role: !GetAtt YanyanLamdaFunctionRole.Arn
       Runtime: nodejs12.x
       Handler: index.handler
       Code:
         ZipFile: !Sub |
           exports.handler = function(event, context) {
+             console.log("message from SQS");
              console.log(JSON.stringify(event));
           }; 
 
-  LambdaLogGroup:
+  YanyanLamdaFunctionForSns:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: YanyanLamdaFunctionForSns
+      Role: !GetAtt YanyanLamdaFunctionRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: !Sub |
+          exports.handler = function(event, context) {
+             console.log("message from SNS");
+             console.log(JSON.stringify(event));
+          };         
+
+  LambdaLogGroupForSqs:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/YanyanLamdaFunction
+      LogGroupName: !Sub /aws/lambda/YanyanLamdaFunctionForSQS
       RetentionInDays: 7
+      
+  LambdaLogGroupForSns:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/YanyanLamdaFunctionForSns
+      RetentionInDays: 7     
 
   YanyanEventSourceMapping:
     Type: AWS::Lambda::EventSourceMapping
     Properties:
       Enabled: true
       EventSourceArn: !GetAtt YanyanQueue.Arn
-      FunctionName: !GetAtt YanyanLamdaFunction.Arn
+      FunctionName: !GetAtt YanyanLamdaFunctionForSQS.Arn
        
   YanyanCloudWatchScheduledRule:
     Type: AWS::Events::Rule
@@ -110,3 +127,16 @@ Resources:
             Condition:
               ArnEquals:
                 aws:SourceArn: !Ref YanyanSNSTopic
+
+  YanyanSNSTopic:
+    Type: 'AWS::SNS::Topic'
+    DeletionPolicy: Delete
+    Properties:
+      TopicName: 'yanyan-sns-topic'
+      Subscription:
+        - Endpoint: "yyhuang@thoughtworks.com"
+          Protocol: email
+        - Endpoint: !GetAtt YanyanQueue.Arn
+          Protocol: sqs
+        - Endpoint: !GetAtt YanyanLamdaFunctionForSns.Arn
+          Protocol: lambda              
