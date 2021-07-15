@@ -1,0 +1,123 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  YanyanLamdaFunctionQueueName:
+    Default: yanyan-lamda-function-queue-cloudwatch-2
+    Type: String
+  YanyanLamdaFunctionQueueDLQName:
+    Default: yanyan-lamda-function-dead-letter-queue
+    Type: String
+Resources:
+  YanyanLamdaFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: YanyanLamdaFunctionRoleName
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowLambdaToAssumeRole
+            Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - 'lambda.amazonaws.com'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  YanyanLamdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: YanyanLamdaFunction
+      Role: !GetAtt YanyanLamdaFunctionRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: !Sub |
+          var response = require('cfn-response');
+          exports.handler = function(event, context) {
+             console.log("call yanyan lamda failed", 404)
+             var responseData = {Value: event.ResourceProperties.List};
+             responseData.Value.push(event.ResourceProperties.AppendedItem);
+          };
+          
+          
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/YanyanLamdaFunction
+      RetentionInDays: 7        
+
+  404MetricFilter:
+    Type: AWS::Logs::MetricFilter
+      Properties:
+        FilterPattern: "[ip, identity, user_id, timestamp, request, status_code = 404, size]"
+        LogGroupName: LambdaLogGroup
+        MetricTransformations:
+          - MetricValue: "1"
+            MetricNamespace: "WebServer/404s"
+            MetricName: "404Count"
+          
+  YanyanLamdaFunctionQueueDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref YanyanLamdaFunctionQueueDLQName
+
+  YanyanLamdaFunctionQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref YanyanLamdaFunctionQueueName
+      VisibilityTimeout: 60
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt YanyanLamdaFunctionQueueDLQ.Arn
+        maxReceiveCount: 3
+
+  ScheduledRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "ScheduledRule"
+      ScheduleExpression: "rate(1 minute)"
+      State: "ENABLED"
+      Targets:
+        - Arn:
+            Fn::GetAtt:
+              - "LambdaFunction"
+              - "Arn"
+          Id: "TargetFunctionV1"
+
+  PermissionForEventsToInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref "YanyanLamdaFunction"
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn:
+        Fn::GetAtt:
+          - "ScheduledRule"
+          - "Arn"
+
+  AlarmTopic:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      TopicName: 'application-notification-sender-alarm-topic'
+      Subscription:
+        - Endpoint: "yyhuang@thoughtworks.com"
+          Protocol: email
+
+  YanyanLamdaFunctionQueueDLQDepthAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: Alarm if dead letter queue depth grows beyond 1 message
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt YanyanLamdaFunctionQueueDLQ.QueueName
+      Statistic: Average
+      Period: '60'
+      EvaluationPeriods: '1'
+      Threshold: '1'
+      TreatMissingData: ignore
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      OKActions:
+        - !Ref AlarmTopic
+      AlarmActions:
+        - !Ref AlarmTopic          

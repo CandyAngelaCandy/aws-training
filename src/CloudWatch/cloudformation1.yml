@@ -1,0 +1,123 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  YanyanLamdaFunctionQueueName:
+    Default: yanyan-lamda-function-queue-cloudwatch-1
+    Type: String
+  YanyanLamdaFunctionQueueDLQName:
+    Default: yanyan-lamda-function-dead-letter-queue
+    Type: String
+Resources:
+  YanyanLamdaFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: YanyanLamdaFunctionRoleName
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowLambdaToAssumeRole
+            Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - 'lambda.amazonaws.com'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  YanyanLamdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: YanyanLamdaFunction
+      Role: !GetAtt YanyanLamdaFunctionRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: !Sub |
+          import { CloudWatch } from 'aws-sdk';
+
+          const cloudWatch = new CloudWatch();
+
+          const cloudWatchRequest = (namespace: string, metricName: string): CloudWatch.PutMetricDataInput => ({
+              Namespace: namespace,
+              MetricData: [{
+                  MetricName: metricName,
+                  Value: 1
+              }]
+          });
+
+          const putMetric = (metricName: string, namespace: string) => {
+              const request = cloudWatchRequest(namespace, metricName);
+              try {
+                  cloudWatch.putMetricData(request);
+              } catch(e) {
+                  console.log("put metric failed", e)
+              }
+          };
+
+          putMetric("metricName", "ApproximateNumberOfMessagesVisible");
+
+
+  YanyanLamdaFunctionQueueDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref YanyanLamdaFunctionQueueDLQName
+
+  YanyanLamdaFunctionQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref YanyanLamdaFunctionQueueName
+      VisibilityTimeout: 60
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt YanyanLamdaFunctionQueueDLQ.Arn
+        maxReceiveCount: 3            
+        
+  ScheduledRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "ScheduledRule"
+      ScheduleExpression: "rate(1 minute)"
+      State: "ENABLED"
+      Targets:
+        - Arn:
+            Fn::GetAtt:
+              - "YanyanLambdaFunction"
+              - "Arn"
+          Id: "TargetFunctionV1"
+          
+  PermissionForEventsToInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref "YanyanLambdaFunction"
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn:
+        Fn::GetAtt:
+          - "ScheduledRule"
+          - "Arn"
+            
+  AlarmTopic:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      TopicName: 'yanyan-Lambda-function-topic'
+      Subscription:
+        - Endpoint: "yyhuang@thoughtworks.com"
+          Protocol: email
+               
+  YanyanLambdaFunctionQueueDLQDepthAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: Alarm if dead letter queue depth grows beyond 1 message
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt YanyanLamdaFunctionQueueDLQName
+      Statistic: Average
+      Period: '60'
+      EvaluationPeriods: '1'
+      Threshold: '1'
+      TreatMissingData: ignore
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      OKActions:
+        - !Ref AlarmTopic
+      AlarmActions:
+        - !Ref AlarmTopic          
