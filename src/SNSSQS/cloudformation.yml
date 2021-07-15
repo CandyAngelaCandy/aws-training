@@ -92,4 +92,21 @@ Resources:
             Action: 'sns:Publish'
             Resource: '*'
       Topics:
-        - !Ref YanyanSNSTopic    
+        - !Ref YanyanSNSTopic 
+          
+  SnsToQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref YanyanQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: allow-sns-messages
+            Effect: Allow
+            Principal: '*'
+            Resource: !GetAtt YanyanQueue.Arn
+            Action: SQS:SendMessage
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref YanyanSNSTopic
