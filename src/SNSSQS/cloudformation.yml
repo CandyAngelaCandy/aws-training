@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  YanyanQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: "yanyan-queue"
+      
+  YanyanSNSTopic:
+    Type: 'AWS::SNS::Topic'
+    DeletionPolicy: Delete
+    Properties:
+      TopicName: 'yanyan-sns-topic'
+      Subscription:
+        - Endpoint: "yyhuang@thoughtworks.com"
+          Protocol: email
+        - Endpoint: !GetAtt YanyanQueue.Arn
+          Protocol: sqs
+           
+  YanyanLamdaFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: YanyanLamdaFunctionRoleName
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowLambdaToAssumeRole
+            Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - 'lambda.amazonaws.com'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole
+      Policies:
+        - PolicyName: AllowPublishToPartnerPlatformDomainEventTopic
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource: !Ref YanyanSNSTopic      
+      
+  YanyanLamdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: YanyanLamdaFunction
+      Role: !GetAtt YanyanLamdaFunctionRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: !Sub |
+          exports.handler = function(event, context) {
+             console.log(JSON.stringify(event));
+          }; 
+
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/YanyanLamdaFunction
+      RetentionInDays: 7
+
+  YanyanEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      Enabled: true
+      EventSourceArn: !GetAtt YanyanQueue.Arn
+      FunctionName: !GetAtt YanyanLamdaFunction.Arn
+       
+  YanyanCloudWatchScheduledRule:
+    Type: AWS::Events::Rule
+    DeletionPolicy: Delete
+    Properties:
+      Description: "trigger sns every 1 minute"
+      ScheduleExpression: "rate(1 minute)"
+      State: "ENABLED"
+      Targets:
+        - Arn:
+            Ref: "YanyanSNSTopic"
+          Id: "OpsTopic"
+          
+  EventTopicPolicy:
+    Type: 'AWS::SNS::TopicPolicy'
+    DeletionPolicy: Delete
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: 'sns:Publish'
+            Resource: '*'
+      Topics:
+        - !Ref YanyanSNSTopic    

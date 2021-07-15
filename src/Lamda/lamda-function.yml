@@ -25,9 +25,6 @@ Resources:
       Handler: index.handler
       Code:
         ZipFile: !Sub |
-          var response = require('cfn-response');
           exports.handler = function(event, context) {
-             var responseData = {Value: event.ResourceProperties.List};
-             responseData.Value.push(event.ResourceProperties.AppendedItem);
-             response.send(event, context, response.SUCCESS, responseData);
+             console.log(JSON.stringify(event));
           };
