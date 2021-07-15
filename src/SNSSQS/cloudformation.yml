@@ -161,4 +161,44 @@ Resources:
         - Endpoint: !GetAtt YanyanQueue.Arn
           Protocol: sqs
         - Endpoint: !GetAtt YanyanLamdaFunctionForSns.Arn
-          Protocol: lambda              
+          Protocol: lambda
+
+  YanyanQueueSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref YanyanSNSTopic
+      Endpoint: !GetAtt YanyanQueue.Arn
+      Protocol: sqs
+      Region: !Ref AWSRegion
+      RawMessageDelivery: true
+      FilterPolicy:
+        pet:
+          - dog
+          
+  AlarmTopic:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      TopicName: 'alarm-topic'
+      Subscription:
+        - Endpoint: "yyhuang@thoughtworks.com"
+          Protocol: email 
+
+  YanyanQueueDLQAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: Alarm if dead letter queue depth grows beyond 1 message
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt YanyanQueueDLQ.QueueName
+      Statistic: Average
+      Period: '60'
+      EvaluationPeriods: '1'
+      Threshold: '1'
+      TreatMissingData: ignore
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      OKActions:
+        - !Ref AlarmTopic
+      AlarmActions:
+        - !Ref AlarmTopic                    
