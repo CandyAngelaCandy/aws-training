@@ -4,6 +4,14 @@ Resources:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: "yanyan-queue"
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt YanyanQueueDLQ.Arn
+        maxReceiveCount: 3
+
+  YanyanQueueDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: "YanyanQueueDLQ"     
       
   YanyanLamdaFunctionRole:
     Type: AWS::IAM::Role
@@ -45,18 +53,27 @@ Resources:
       Role: !GetAtt YanyanLamdaFunctionRole.Arn
       Runtime: nodejs12.x
       Handler: index.handler
+      DeadLetterConfig:
+        TargetArn: !GetAtt YanyanLamdaFunctionForSQSDLQ.Arn
       Code:
         ZipFile: !Sub |
           exports.handler = function(event, context) {
              console.log("message from SQS");
              console.log(JSON.stringify(event));
-          }; 
+          };
+          
+  YanyanLamdaFunctionForSQSDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: "YanyanLamdaFunctionForSQSDLQ"    
 
   YanyanLamdaFunctionForSns:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: YanyanLamdaFunctionForSns
       Role: !GetAtt YanyanLamdaFunctionRole.Arn
+      DeadLetterConfig:
+        TargetArn: !GetAtt YanyanLamdaFunctionForSnsDLQ.Arn
       Runtime: nodejs12.x
       Handler: index.handler
       Code:
@@ -64,7 +81,12 @@ Resources:
           exports.handler = function(event, context) {
              console.log("message from SNS");
              console.log(JSON.stringify(event));
-          };         
+          }; 
+
+  YanyanLamdaFunctionForSnsDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: "YanyanLamdaFunctionForSnsDLQ"
 
   LambdaLogGroupForSqs:
     Type: AWS::Logs::LogGroup
