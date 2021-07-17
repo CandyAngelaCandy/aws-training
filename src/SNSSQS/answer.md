@@ -30,6 +30,9 @@ Advanced
 ACs
 有可部署 Basic 中内容的 Cloudformation
 对比SNS->Lambda和SNS->SQS->Lambda的区别
+1.适用场景？？
+
+
 同时对于 SQS和Lambda 要有 DLQ(dead letter queue)
 使用 IAM 控制 访问权限
 为 SNS 添加 tag（eg. Project code, owner)

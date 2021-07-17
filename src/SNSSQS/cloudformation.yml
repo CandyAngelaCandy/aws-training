@@ -1,18 +1,20 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Resources:
+  YanyanQueueDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: "Yanyan-queue-DLQ"
+      
   YanyanQueue:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: "yanyan-queue"
+      MessageRetentionPeriod: 432000
+      VisibilityTimeout: 60
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt YanyanQueueDLQ.Arn
         maxReceiveCount: 3
-
-  YanyanQueueDLQ:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: "YanyanQueueDLQ"     
-      
+  
   YanyanLamdaFunctionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -53,8 +55,8 @@ Resources:
       Role: !GetAtt YanyanLamdaFunctionRole.Arn
       Runtime: nodejs12.x
       Handler: index.handler
-      DeadLetterConfig:
-        TargetArn: !GetAtt YanyanLamdaFunctionForSQSDLQ.Arn
+#      DeadLetterConfig:
+#        TargetArn: !GetAtt YanyanLamdaFunctionForSQSDLQ.Arn
       Code:
         ZipFile: !Sub |
           exports.handler = function(event, context) {
@@ -72,8 +74,8 @@ Resources:
     Properties:
       FunctionName: YanyanLamdaFunctionForSns
       Role: !GetAtt YanyanLamdaFunctionRole.Arn
-      DeadLetterConfig:
-        TargetArn: !GetAtt YanyanLamdaFunctionForSnsDLQ.Arn
+#      DeadLetterConfig:
+#        TargetArn: !GetAtt YanyanLamdaFunctionForSnsDLQ.Arn
       Runtime: nodejs12.x
       Handler: index.handler
       Code:
@@ -158,24 +160,24 @@ Resources:
       Subscription:
         - Endpoint: "yyhuang@thoughtworks.com"
           Protocol: email
-        - Endpoint: !GetAtt YanyanQueue.Arn
-          Protocol: sqs
+#        - Endpoint: !GetAtt YanyanQueue.Arn
+#          Protocol: sqs
         - Endpoint: !GetAtt YanyanLamdaFunctionForSns.Arn
           Protocol: lambda
 
+# 貌似没用？？
   YanyanQueueSubscription:
     Type: AWS::SNS::Subscription
     Properties:
       TopicArn: !Ref YanyanSNSTopic
       Endpoint: !GetAtt YanyanQueue.Arn
       Protocol: sqs
-      Region: !Ref AWSRegion
       RawMessageDelivery: true
       FilterPolicy:
         pet:
           - dog
           
-  AlarmTopic:
+  YanyanAlarmTopic:
     Type: 'AWS::SNS::Topic'
     Properties:
       TopicName: 'alarm-topic'
@@ -193,12 +195,12 @@ Resources:
         - Name: QueueName
           Value: !GetAtt YanyanQueueDLQ.QueueName
       Statistic: Average
-      Period: '60'
-      EvaluationPeriods: '1'
-      Threshold: '1'
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
       TreatMissingData: ignore
       ComparisonOperator: GreaterThanOrEqualToThreshold
       OKActions:
-        - !Ref AlarmTopic
+        - !Ref YanyanAlarmTopic
       AlarmActions:
-        - !Ref AlarmTopic                    
+        - !Ref YanyanAlarmTopic                    
