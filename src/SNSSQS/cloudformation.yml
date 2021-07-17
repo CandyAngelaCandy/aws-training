@@ -1,5 +1,46 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Resources:
+  YanyanKMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: An example symmetric CMK
+      KeySpec: RSA_4096
+      PendingWindowInDays: 20
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: key-default-1
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: arn:aws:iam::160071257600:root
+            Action: kms:*
+            Resource: '*'
+          - Sid: Allow administration of the key
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - kms:Create*
+              - kms:Describe*
+              - kms:Enable*
+              - kms:List*
+              - kms:Put*
+              - kms:Update*
+              - kms:Revoke*
+              - kms:Disable*
+              - kms:Get*
+              - kms:Delete*
+              - kms:ScheduleKeyDeletion
+              - kms:CancelKeyDeletion
+            Resource: '*'
+          - Sid: decrypt
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - kms:GenerateDataKey*
+              - kms:Decrypt
+            Resource: '*'
+            
   YanyanQueueDLQ:
     Type: AWS::SQS::Queue
     Properties:
@@ -31,6 +72,21 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
         - arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole
+      Policies:
+        - PolicyName: lambda-dlq-Policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ChangeMessageVisibility
+                  - sqs:DeleteMessage
+                  - sqs:SendMessage
+                  - sqs:GetQueueAttributes
+                  - sqs:ReceiveMessage
+                Resource: 
+                  - !GetAtt 'YanyanLamdaFunctionForSQSDLQ.Arn'
+                  - !GetAtt 'YanyanLamdaFunctionForSnsDLQ.Arn'
 #      Policies:
 #        - PolicyName: AllowPublishToPartnerPlatformDomainEventTopic
 #          PolicyDocument:
@@ -47,6 +103,11 @@ Resources:
       Action: 'lambda:InvokeFunction'
       FunctionName: !Ref YanyanLamdaFunctionForSns
       Principal: sns.amazonaws.com
+
+  YanyanLamdaFunctionForSQSDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: "YanyanLamdaFunctionForSQSDLQ"
       
   YanyanLamdaFunctionForSQS:
     Type: AWS::Lambda::Function
@@ -55,27 +116,22 @@ Resources:
       Role: !GetAtt YanyanLamdaFunctionRole.Arn
       Runtime: nodejs12.x
       Handler: index.handler
-#      DeadLetterConfig:
-#        TargetArn: !GetAtt YanyanLamdaFunctionForSQSDLQ.Arn
+      DeadLetterConfig:
+        TargetArn: !GetAtt YanyanLamdaFunctionForSQSDLQ.Arn
       Code:
         ZipFile: !Sub |
           exports.handler = function(event, context) {
              console.log("message from SQS");
              console.log(JSON.stringify(event));
-          };
-          
-  YanyanLamdaFunctionForSQSDLQ:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: "YanyanLamdaFunctionForSQSDLQ"    
+          }; 
 
   YanyanLamdaFunctionForSns:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: YanyanLamdaFunctionForSns
       Role: !GetAtt YanyanLamdaFunctionRole.Arn
-#      DeadLetterConfig:
-#        TargetArn: !GetAtt YanyanLamdaFunctionForSnsDLQ.Arn
+      DeadLetterConfig:
+        TargetArn: !GetAtt YanyanLamdaFunctionForSnsDLQ.Arn
       Runtime: nodejs12.x
       Handler: index.handler
       Code:
@@ -157,6 +213,12 @@ Resources:
     DeletionPolicy: Delete
     Properties:
       TopicName: 'yanyan-sns-topic'
+      KmsMasterKeyId: !Ref YanyanKMSKey
+      Tags:
+        - Key: "projectCode"
+          Value: "aswTraining"
+        - Key: "owner"
+          Value: "YanyanHuang"
       Subscription:
         - Endpoint: "yyhuang@thoughtworks.com"
           Protocol: email
@@ -173,7 +235,7 @@ Resources:
       Endpoint: !GetAtt YanyanQueue.Arn
       Protocol: sqs
       RawMessageDelivery: true
-      FilterPolicy:
+      FilterPolicy: 
         pet:
           - dog
           
@@ -181,6 +243,11 @@ Resources:
     Type: 'AWS::SNS::Topic'
     Properties:
       TopicName: 'alarm-topic'
+      Tags:
+        - Key: "projectCode"
+          Value: "aswTraining"
+        - Key: "owner"
+          Value: "YanyanHuang"
       Subscription:
         - Endpoint: "yyhuang@thoughtworks.com"
           Protocol: email 

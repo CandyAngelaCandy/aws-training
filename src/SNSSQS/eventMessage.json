@@ -1,0 +1,24 @@
+{
+  "Records":[
+    {
+      "messageId":"4269702b-074a-43a1-903b-fd38207c7db5",
+      "receiptHandle":"AQEBzH/jmjNlTJOVsGvjHh44UG1YPVFKOnZITLnEYLIryyMWzQzORrMxp131gLkPCgbEzS5uhBG525RTEsLuhM8r0f7Gt7qJoW3+kHtoqWWQG79c5bOTs4qG4UjHcT+IshJHFWtax6HJwipPZbSUS723ectSFChzM9HdcpvO3DFJoiGVWh2lQqFLCP/0a8AfChpqSZTvgddI4fNU92GTV9kU8gbbf4tkQ+e6WrCJTsOTkTc7KjiDYrCLn1p+uQ4yMtCq8+TckhtYxBmYGoL2FzoIqwzaM2L5idG2zYnEp4VpcIk4DAJwQP/3ti59nOoL3Z40BgCSCyW5nvVxXtIMO59QJoZTnlTs+m2zlQ+u7jzD7GNEEY+KJzTI+Q40Na/Ql0KbN1iUvQ5yLZoZEZDI3ixHgQ==",
+      "body":{
+        "version":"1"
+      },
+      "attributes":{
+        "ApproximateReceiveCount":"1",
+        "SentTimestamp":"1626526041982",
+        "SenderId":"AIDAIY4XCTD3OFZN5ED42",
+        "ApproximateFirstReceiveTimestamp":"1626526041990"
+      },
+      "messageAttributes":{
+        "pet":"dog"
+      },
+      "md5OfBody":"31d5c4374808da3f791fa8e44d63b7e2",
+      "eventSource":"aws:sqs",
+      "eventSourceARN":"arn:aws:sqs:ap-southeast-2:160071257600:yanyan-queue",
+      "awsRegion":"ap-southeast-2"
+    }
+  ]
+}
