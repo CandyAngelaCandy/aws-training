@@ -87,15 +87,6 @@ Resources:
                 Resource: 
                   - !GetAtt 'YanyanLamdaFunctionForSQSDLQ.Arn'
                   - !GetAtt 'YanyanLamdaFunctionForSnsDLQ.Arn'
-#      Policies:
-#        - PolicyName: AllowPublishToPartnerPlatformDomainEventTopic
-#          PolicyDocument:
-#            Version: '2012-10-17'
-#            Statement:
-#              - Effect: Allow
-#                Action:
-#                  - sns:Publish
-#                Resource: !Ref PartnerPlatformNotificationTopicArn
 
   YanyanLamdaFunctionForSnsInvokePermission:
     Type: 'AWS::Lambda::Permission'
@@ -236,8 +227,7 @@ Resources:
       Protocol: sqs
       RawMessageDelivery: true
       FilterPolicy: 
-        pet:
-          - dog
+        pet: 'dog'
           
   YanyanAlarmTopic:
     Type: 'AWS::SNS::Topic'

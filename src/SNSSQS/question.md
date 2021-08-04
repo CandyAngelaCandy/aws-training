@@ -36,6 +36,8 @@ Amazon SQS 会将可见性超时，*Amazon SQS 阻止其他用户接收并处理
 
 10.研究IAM的principle 如何配置？
 
+11.配置cmk for sns/sqs
+
 
 
 

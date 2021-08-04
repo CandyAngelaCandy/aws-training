@@ -1,7 +1,9 @@
 ### 五、总结
 1.如何构造一个比较clean的镜像？  
-基础镜像体积尽可能小
+基础镜像体积尽可能小  
+
 2.Dockerfile中 RUN, entrypoint 和 CMD的区别  
+
 作用：
 从根本上说, ENTRYPOINT和CMD都是让用户指定一个可执行程序, 这个可执行程序在container启动后自动启动. 
 实际上, 如果你想让自己制作的镜像自动运行程序(不需要在docker run后面添加命令行指定运行的命令), 你必须在Dockerfile里面, 使用ENTRYPOINT或者CMD命令
@@ -121,12 +123,16 @@ Hello John
 
 参考：https://www.cnblogs.com/sparkdev/p/8461576.html
 
-3. volumes的两种配法
+
+3.volumes的两种配法
+
 4.volumes挂载在宿主机的目录，因为Mac和linux文件目录结构不同，linux能找到具体挂载的目录，
    但Mac找不到。
+
 5.dockerfile实践
-变化少的文件，应该放在dockerfile的上面
-6. ports功能  
+变化少的文件，应该放在dockerfile的上面  
+
+6.ports功能  
 docker-compose中有两种方式可以暴露容器的端口：ports和expose。
 ```
 ports:
@@ -135,8 +141,9 @@ ports:
   - "443"           # 绑定容器的443端口到主机的任意端口，容器启动时随机分配绑定的主机端口号
 ```
 不写port可以吗
-不管是否指定主机端口，使用ports都会将端口暴露给主机和其他容器。
-7.expose
+不管是否指定主机端口，使用ports都会将端口暴露给主机和其他容器。  
+
+7.expose  
 expose暴露容器给link到当前容器的容器，或者暴露给同一个networks的容器，用法：
 expose:
 - "3000"
@@ -144,6 +151,7 @@ expose:
 以上指令将当前容器的端口3000和8000暴露给其他容器。
 
 和ports的区别是，expose不会将端口暴露给主机，主机无法访问expose的端口。
+
 8.docker compose中的hostname
 
 9.ADD 和copy的区别
@@ -160,7 +168,14 @@ COPY实际上只是ADD的精简版本，旨在满足大部分“复制文件到�
 
 10.volume的两种写法？
 
-
+### 培训总结
+1. Compose 里使用 image 或者 build，本地服务最好使用 build
+2. 尽量使用 networks 而不是 links
+3. 前端访问后端使用**主机的地址**而不是容器内的服务名称
+4. RUN 后面，同类型的操作尽量使用 && 连接起来，只建立一层
+5. EXPOSE 是个提示，容器内部同一个网端下所有端口是可以直接访问的
+6. docker rmi 使用名称删除是基于 tag 进行删除的，使用 id 删除会删除镜像文件
+7. 尽量少使用 restart=always
 
 
 

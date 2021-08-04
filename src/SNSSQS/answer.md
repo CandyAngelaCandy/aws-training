@@ -30,6 +30,8 @@ Advanced
 ACs
 有可部署 Basic 中内容的 Cloudformation
 对比SNS->Lambda和SNS->SQS->Lambda的区别
+区别：sqs可以设置visibilityTimeout, 在消息没被消费前，不允许被其他用户消费。sns->lambda没有。SNS->Lambda消息可以有多个出口，而SNS->SQS->Lambda，
+lambda接收到的消息只有一个出口。
 1.适用场景？？
 
 
