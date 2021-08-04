@@ -173,3 +173,7 @@ policy 可以再具体一点
   ![img_12.png](img/img_12.png) 
 ### Put your lambda into VPC
 
+培训总结
+1.lambda 1,000 个并发执行限制
+
+
