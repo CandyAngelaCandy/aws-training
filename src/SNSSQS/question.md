@@ -30,14 +30,19 @@ Amazon SQS 会将可见性超时，*Amazon SQS 阻止其他用户接收并处理
 7.单独对某些资源配置权限
 
 8.trigger lambdas三次失败，看dlq里面有没有消息 ？
-没有信息为什么？
+没有信息为什么？可能失败触发的不对，可能500 error才能触发。
 
 9.如何验证filter policy， 不匹配是收不到，但是怎么让他匹配呢？
+filter policy 验证格式有问题。
 
 10.研究IAM的principle 如何配置？
 
 11.配置cmk for sns/sqs
 
+
+培训总结：
+1. 所有的aws命令都要指定profile，并不会给生成一个默认的profile，显式指定profile是一个好习惯
+2. AWS的所有权限认证是双向的。比如sqs订阅sns，sqs需要有访问sns的权限，sns也需要有访问sqs的权限。
 
 
 
